@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Local models and adapters
+Qwen3-VL-8B-Instruct/
+lora_weights/*
+!lora_weights/.gitkeep
+checkpoints/
+outputs/
+runs/
+
+# Local data and generated artifacts
+dataset_human.jsonl
+data/images/**
+data/sample-images/**
+data/check_images/**
+data/output/**
+!data/images/.gitkeep
+!data/output/.gitkeep
+
+# Web demo runtime files
+uploads/
+web/backend/history.db
+web/frontend/node_modules/
+web/frontend/dist/
+
+# Logs and temporary files
+*.log
+tmp/
+temp/

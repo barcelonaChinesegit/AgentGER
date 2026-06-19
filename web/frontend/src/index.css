@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg-primary: #0c1322;
+  --color-bg-secondary: #172033;
+  --color-bg-tertiary: #1e293b;
+  --color-accent: #ed7420;
+  --color-accent-light: #f6b77a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Source Sans 3', sans-serif;
+  background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 50%, #1a1f35 100%);
+  min-height: 100vh;
+  color: #e2e8f0;
+  overflow-x: hidden;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-accent) 0%, #b84314 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-light);
+}
+
+/* 玻璃态效果 */
+.glass {
+  background: rgba(23, 32, 51, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-light {
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* 发光效果 */
+.glow {
+  box-shadow: 0 0 40px rgba(237, 116, 32, 0.15);
+}
+
+.glow-sm {
+  box-shadow: 0 0 20px rgba(237, 116, 32, 0.1);
+}
+
+/* 渐变文字 */
+.gradient-text {
+  background: linear-gradient(135deg, #f6b77a 0%, #ed7420 50%, #de5a16 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 网格背景 */
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(237, 116, 32, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(237, 116, 32, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* 动画 */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* 按钮悬停效果 */
+.btn-primary {
+  @apply relative overflow-hidden transition-all duration-300;
+  background: linear-gradient(135deg, #ed7420 0%, #de5a16 100%);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(237, 116, 32, 0.3);
+}
+
+/* 输入框焦点效果 */
+.input-focus {
+  @apply transition-all duration-300;
+}
+
+.input-focus:focus {
+  box-shadow: 0 0 0 3px rgba(237, 116, 32, 0.2);
+  border-color: var(--color-accent);
+}
+
+/* 卡片悬停效果 */
+.card-hover {
+  @apply transition-all duration-300;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(237, 116, 32, 0.3);
+}
+
+/* 进度条 */
+.progress-bar {
+  background: linear-gradient(90deg, #ed7420 0%, #f6b77a 50%, #ed7420 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* 分数圆环 */
+.score-ring {
+  stroke-dasharray: 100;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 1s ease-out;
+}
+
