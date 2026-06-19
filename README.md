@@ -1,53 +1,39 @@
 # AgentGER
 
-AgentGER is a multimodal Generation-Evaluation-Refinement framework for figure-to-text summarization. The project follows the EMNLP submission architecture in `2565_AgentGER_Toward_a_Human_A.pdf`: a GenModel generates quality-controlled figure summaries, an EvaModel performs five-dimensional Chain-of-Evaluation scoring, and a RefModel refines weak summaries while preserving evaluation consistency through knowledge distillation and experience replay.
+English | [简体中文](README-zh.md)
 
-## What This Repository Contains
+AgentGER is a multimodal agent framework for figure-to-text summarization. It follows a Generation-Evaluation-Refinement paradigm: a generation model produces figure summaries at controlled quality levels, an evaluation model scores them with human-aligned reasoning, and a refinement model improves weak summaries using evaluation feedback.
 
-This repository is organized for code review and graduate application portfolio use. It keeps the runnable research prototype, training scripts, evaluation utilities, and web demo structure, while large local data/model artifacts are excluded from version control.
+This repository is organized as a clean research prototype for code review, portfolio presentation, and future reproduction of the EMNLP submission: [AgentGER_EMNLP_Submission.pdf](docs/paper/AgentGER_EMNLP_Submission.pdf).
 
-```text
-.
-├── main.py                    # CLI entry point
-├── src/
-│   ├── gen_model.py           # GenModel: low/medium/high summary generation
-│   ├── eva_model.py           # EvaModel: five-dimensional CoE evaluation
-│   ├── ref_model.py           # RefModel: evaluation-guided refinement
-│   ├── prompts.py             # Paper-aligned prompt templates
-│   ├── pipeline.py            # AgentGER end-to-end pipeline
-│   ├── model_loader.py        # Qwen3-VL + LoRA loading
-│   └── utils.py               # JSON parsing, validation, JSONL helpers
-├── training/
-│   ├── data_format.py         # Convert JSONL into Qwen3-VL chat training data
-│   ├── train_lora.py          # LoRA training for EvaModel / RefModel
-│   ├── train_lora_distill.py  # RefModel KD + experience replay training
-│   └── mixed_dataset.py       # Mixed evaluation/refinement dataset
-├── scripts/                   # Evaluation, statistics, and batch utilities
-├── web/                       # Optional FastAPI + React demo
-└── docs/                      # Architecture and data notes
-```
+## Highlights
 
-## Paper-Aligned Architecture
+- **Paper-aligned framework**: implements GenModel, EvaModel, and RefModel as separate, readable modules.
+- **Human-aligned evaluation**: uses five dimensions from the paper: Faithfulness, Completeness, Conciseness, Logicality, and Analysis.
+- **Interpretable Chain-of-Evaluation**: returns dimension-wise scores plus reasoning chains instead of a single opaque score.
+- **Evaluation-guided refinement**: RefModel generates an improved summary based on weak dimensions identified during evaluation.
+- **Training support**: includes LoRA fine-tuning, knowledge distillation, and experience replay code for preserving evaluation ability during refinement training.
+- **Portfolio-friendly layout**: large datasets, generated outputs, model checkpoints, uploads, and runtime databases are excluded from git.
+
+## Method Overview
 
 ```text
 Figure image
     |
     v
 GenModel
-    Generates low / medium / high quality initial summaries.
+    Generate low / medium / high quality candidate summaries.
     |
     v
 EvaModel
-    Produces five-dimensional scores and reasoning chains:
-    Faithfulness, Completeness, Conciseness, Logicality, Analysis.
+    Score each summary with five-dimensional Chain-of-Evaluation.
     |
     v
 RefModel
-    Uses evaluation feedback to generate an improved summary.
-    Training uses L_refine + beta * L_distill + gamma * L_replay.
+    Refine the summary with evaluation feedback.
 ```
 
-The core output schema follows the EMNLP paper:
+The core output schema is:
 
 ```json
 {
@@ -65,19 +51,47 @@ The core output schema follows the EMNLP paper:
     "logicality": "Reasoning grounded in the figure.",
     "analysis": "Reasoning grounded in the figure."
   },
-  "improved_summary": "Only returned by RefModel."
+  "improved_summary": "Returned by RefModel."
 }
 ```
 
-The paper does not require a learned weighted score field; this repo keeps the main pipeline aligned with five discrete scores plus reasoning chains.
+AgentGER intentionally uses five discrete scores and reasoning chains. It does not rely on a learned weighted-score field.
 
-## Installation
+## Repository Structure
+
+```text
+.
+├── main.py                     # CLI entry point for generation, evaluation, refinement, and training
+├── src/                        # Core AgentGER implementation
+│   ├── gen_model.py            # GenModel: quality-controlled summary generation
+│   ├── eva_model.py            # EvaModel: five-dimensional Chain-of-Evaluation scoring
+│   ├── ref_model.py            # RefModel: evaluation-guided refinement
+│   ├── pipeline.py             # End-to-end AgentGER loops
+│   ├── prompts.py              # Paper-aligned prompt templates and scoring dimensions
+│   ├── model_loader.py         # Qwen3-VL and LoRA loading utilities
+│   └── utils.py                # JSON parsing, validation, JSONL helpers
+├── training/                   # Fine-tuning and distillation
+│   ├── data_format.py          # Convert AgentGER JSONL records to Qwen3-VL chat data
+│   ├── train_lora.py           # LoRA training for EvaModel / RefModel
+│   ├── train_lora_distill.py   # RefModel training with KD + experience replay
+│   └── mixed_dataset.py        # Mixed score/refine dataset for distillation
+├── scripts/                    # Dataset analysis, scoring, and batch experiment helpers
+├── api_pipeline/               # Optional external multimodal API implementation
+├── web/                        # Optional FastAPI + React demo
+├── data/                       # Lightweight placeholders only; real data is git-ignored
+├── lora_weights/               # Placeholder for local LoRA adapters; weights are git-ignored
+└── docs/                       # Architecture, data, training notes, and paper PDF
+```
+
+## Quick Start
+
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Model weights are not included. Place the base model and LoRA adapters locally:
+Download or place the base model and LoRA adapters locally:
 
 ```text
 Qwen3-VL-8B-Instruct/
@@ -87,21 +101,17 @@ lora_weights/
 └── ref_model_distill/
 ```
 
-## CLI Usage
+Put local figure images in:
 
-Generate low/medium/high quality summaries with GenModel:
-
-```bash
-python main.py generate \
-  --image_folder ./data/images \
-  --output ./outputs/generated_summaries.jsonl
+```text
+data/images/
 ```
 
 Evaluate a summary with EvaModel:
 
 ```bash
 python main.py evaluate \
-  --image ./examples/example.png \
+  --image ./data/images/example.png \
   --summary "A short figure summary." \
   --lora_path ./lora_weights/eva_model
 ```
@@ -110,45 +120,43 @@ Refine a summary with RefModel:
 
 ```bash
 python main.py refine \
-  --image ./examples/example.png \
+  --image ./data/images/example.png \
   --summary "A short figure summary." \
   --lora_path ./lora_weights/ref_model_distill
 ```
 
-Refine a user-provided summary and verify the improvement with EvaModel:
+Run the full user-facing refinement loop:
 
 ```bash
 python main.py optimize \
-  --image ./examples/example.png \
+  --image ./data/images/example.png \
   --summary "A short figure summary." \
   --ref_lora_path ./lora_weights/ref_model_distill \
   --eva_lora_path ./lora_weights/eva_model
 ```
 
-Run the AgentGER data-building loop:
+Build synthetic AgentGER records from a folder of figures:
 
 ```bash
 python main.py build-dataset \
   --image_folder ./data/images \
-  --output ./outputs/agentger_dataset.jsonl \
+  --output ./data/output/agentger_dataset.jsonl \
   --ref_lora_path ./lora_weights/ref_model_distill \
   --eva_lora_path ./lora_weights/eva_model
 ```
 
-Legacy command aliases are still supported for older scripts:
+## Training Pipeline
 
-```text
-feature1 -> generate
-feature2 -> refine
-feature3 -> evaluate
-pipeline1 -> build-dataset
-pipeline2 -> optimize
-pipeline3 -> direct-score
+Convert JSONL records to Qwen3-VL chat-format data:
+
+```bash
+python training/data_format.py \
+  --input ./data/output/agentger_dataset.jsonl \
+  --output-dir ./data/output \
+  --generate-both
 ```
 
-## Training
-
-Stage 1 trains EvaModel on human-annotated evaluation data:
+Train EvaModel:
 
 ```bash
 python main.py train \
@@ -157,7 +165,7 @@ python main.py train \
   --output_dir ./lora_weights/eva_model
 ```
 
-Stage 2 trains RefModel on evaluation-guided refinement data:
+Train RefModel:
 
 ```bash
 python main.py train \
@@ -166,7 +174,7 @@ python main.py train \
   --output_dir ./lora_weights/ref_model
 ```
 
-KD + experience replay training keeps RefModel aligned with the frozen EvaModel:
+Train RefModel with knowledge distillation and experience replay:
 
 ```bash
 python training/train_lora_distill.py \
@@ -176,27 +184,54 @@ python training/train_lora_distill.py \
   --refine_data_path ./data/output/ref_training_data.json \
   --output_dir ./lora_weights/ref_model_distill \
   --distill_beta 0.5 \
-  --replay_gamma 0.3
+  --replay_gamma 0.3 \
+  --temperature 2.0
 ```
 
-See `docs/TRAINING.md` for the paper-aligned loss decomposition and training-file flow.
+More details are available in [docs/TRAINING.md](docs/TRAINING.md).
 
-## Data Policy
+## Optional API Mode
 
-Large image folders, generated outputs, checkpoints, uploads, and runtime databases are excluded from GitHub. See `docs/DATA.md` for the expected data formats and directory placeholders.
-
-The public repository should keep only code, docs, schemas, and lightweight placeholders. Full FigGER images, local verification subsets, generated scores, and LoRA adapters should stay local or be released through a separate dataset/model hosting channel.
-
-## API Mode
-
-The optional `api_pipeline/` path calls an external multimodal API. It never stores keys in code; set the key through the environment before use:
+`api_pipeline/` provides an API-backed version of EvaModel and RefModel. API keys are never stored in code:
 
 ```bash
 export ZHIZENGZENG_API_KEY="your-api-key"
+python api_pipeline/main.py direct-score \
+  --image ./data/images/example.png \
+  --summary "A short figure summary."
 ```
+
+## Optional Web Demo
+
+The web demo wraps the same CLI backend with a FastAPI service and React frontend:
+
+```bash
+cd web
+bash start.sh
+```
+
+The demo stores uploaded images and history locally. These runtime artifacts are ignored by git.
+
+## Data And Model Policy
+
+This repository is intentionally lightweight:
+
+- Full figure images are not committed.
+- Generated JSONL outputs and metrics are not committed.
+- LoRA adapters and base model weights are not committed.
+- Runtime uploads and local databases are not committed.
+
+See [docs/DATA.md](docs/DATA.md) for expected record schemas and local directory conventions.
+
+## Key Files For Reviewers
+
+- [src/pipeline.py](src/pipeline.py): end-to-end AgentGER loops.
+- [src/prompts.py](src/prompts.py): scoring dimensions and output schemas.
+- [src/eva_model.py](src/eva_model.py): Chain-of-Evaluation scoring.
+- [src/ref_model.py](src/ref_model.py): evaluation-guided refinement.
+- [training/train_lora_distill.py](training/train_lora_distill.py): KD + experience replay training.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): compact architecture summary.
 
 ## Notes
 
-- The repository is structured around the EMNLP version of AgentGER.
-- The codebase is not meant to rerun training automatically; it exposes the architecture, data formats, and runnable entry points.
-- The web demo is optional and uses the same CLI backend commands.
+This repository is a research prototype built around the EMNLP AgentGER submission. It is designed to make the model architecture, pipeline, training strategy, and implementation choices easy to inspect without uploading large private/local experiment artifacts.
