@@ -78,6 +78,7 @@ AgentGER intentionally uses five discrete scores and reasoning chains. It does n
 ├── scripts/                    # Dataset analysis, scoring, and batch experiment helpers
 ├── api_pipeline/               # Optional external multimodal API implementation
 ├── web/                        # Optional FastAPI + React demo
+├── start_frontend_demo.sh       # One-command local web demo launcher
 ├── data/                       # Lightweight placeholders only; real data is git-ignored
 ├── lora_weights/               # Placeholder for local LoRA adapters; weights are git-ignored
 └── docs/                       # Architecture, data, training notes, and paper PDF
@@ -203,14 +204,60 @@ python api_pipeline/main.py direct-score \
 
 ## Optional Web Demo
 
-The web demo wraps the same CLI backend with a FastAPI service and React frontend:
+The web demo wraps the AgentGER evaluation/refinement workflow with a FastAPI backend and a React/Vite frontend. The current UI is designed as a light, reviewer-facing analysis workspace with a left project sidebar, centered pipeline progress, upload card, pipeline selector, score report, and local history.
+
+For a Mac/local frontend demo without loading model weights:
+
+```bash
+./start_frontend_demo.sh
+```
+
+Then open:
+
+```text
+http://127.0.0.1:3000
+```
+
+The launcher starts:
+
+- Frontend: `http://127.0.0.1:3000`
+- Backend API: `http://127.0.0.1:8000`
+- Inference mode: `mock` by default, so the local demo does not download or load the large Qwen3-VL model.
+
+Stop both services with `Ctrl+C`.
+
+For server-side local inference, place the base model and LoRA adapters on the server and run:
+
+```bash
+AGENTGER_INFERENCE_MODE=local \
+AGENTGER_MODEL_PATH=/path/to/Qwen3-VL-8B-Instruct \
+AGENTGER_EVA_LORA_PATH=/path/to/eva_model \
+AGENTGER_REF_LORA_PATH=/path/to/ref_model_distill \
+./web/start.sh
+```
+
+The same frontend will call the FastAPI backend, while the backend uses the server-local model through `main.py`.
+
+The demo stores uploaded images and history locally. These runtime artifacts are ignored by git.
+
+## Demo Video Script
+
+Use [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) as a ready-to-record walkthrough for the current frontend. It includes:
+
+- a 90-120 second shot list,
+- suggested narration,
+- local mock-mode explanation,
+- upload / evaluation / refinement / history workflow,
+- server deployment notes.
+
+## Legacy Web Commands
+
+You can still start the web services from inside `web/`:
 
 ```bash
 cd web
 bash start.sh
 ```
-
-The demo stores uploaded images and history locally. These runtime artifacts are ignored by git.
 
 ## Data And Model Policy
 

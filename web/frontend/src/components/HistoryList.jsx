@@ -31,16 +31,16 @@ function formatDate(dateString) {
 
 function StatusBadge({ status }) {
   const configs = {
-    completed: { text: '已完成', color: 'bg-emerald-500/20 text-emerald-400' },
-    pending: { text: '等待中', color: 'bg-amber-500/20 text-amber-400' },
-    processing: { text: '处理中', color: 'bg-blue-500/20 text-blue-400' },
-    failed: { text: '失败', color: 'bg-red-500/20 text-red-400' },
+    completed: { text: '已完成', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
+    pending: { text: '等待中', color: 'bg-amber-50 text-amber-600 border-amber-100' },
+    processing: { text: '处理中', color: 'bg-sky-50 text-sky-600 border-sky-100' },
+    failed: { text: '失败', color: 'bg-red-50 text-red-600 border-red-100' },
   };
   
   const config = configs[status] || configs.pending;
   
   return (
-    <span className={`px-2 py-0.5 text-xs rounded-full ${config.color}`}>
+    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${config.color}`}>
       {config.text}
     </span>
   );
@@ -54,16 +54,15 @@ function HistoryItem({ item, isSelected, onClick }) {
     <button
       onClick={onClick}
       className={`
-        w-full p-4 rounded-xl text-left transition-all duration-300
+        w-full rounded-lg border p-3 text-left transition-all duration-300
         ${isSelected 
-          ? 'glass border-brand-500/50 glow-sm' 
-          : 'glass-light hover:border-slate-500/30 border-transparent'
+          ? 'border-brand-300 bg-brand-50/75 shadow-sm'
+          : 'border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50'
         }
       `}
     >
       <div className="flex items-start gap-3">
-        {/* 缩略图 */}
-        <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-700/50 flex-shrink-0">
+        <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
           <img
             src={`/uploads/${item.image_filename}`}
             alt=""
@@ -77,24 +76,24 @@ function HistoryItem({ item, isSelected, onClick }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <StatusBadge status={item.status} />
-            <span className="text-xs text-slate-500">
+            <span className="text-xs font-bold text-stone-400">
               {pipelineLabel}
             </span>
           </div>
           
-          <p className="text-sm text-slate-300 truncate mb-1">
+          <p className="mb-1 truncate text-sm font-semibold text-stone-800">
             {item.summary}
           </p>
           
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-stone-400">
               {formatDate(item.created_at)}
             </span>
             {item.status === 'completed' && (
               <span className={`
-                text-sm font-semibold
-                ${totalScore >= 8 ? 'text-emerald-400' : 
-                  totalScore >= 6 ? 'text-amber-400' : 'text-slate-400'}
+                text-sm font-extrabold
+                ${totalScore >= 8 ? 'text-emerald-600' :
+                  totalScore >= 6 ? 'text-amber-600' : 'text-stone-500'}
               `}>
                 {totalScore.toFixed(1)}
               </span>
@@ -137,7 +136,7 @@ export default function HistoryList({ onSelect, selectedId, refreshTrigger }) {
   if (loading && history.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
       </div>
     );
   }
@@ -145,10 +144,10 @@ export default function HistoryList({ onSelect, selectedId, refreshTrigger }) {
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-400 text-sm">{error}</p>
+        <p className="text-sm text-red-600">{error}</p>
         <button
           onClick={fetchHistory}
-          className="mt-2 text-sm text-brand-400 hover:text-brand-300"
+          className="mt-2 text-sm font-bold text-brand-600 hover:text-brand-700"
         >
           重试
         </button>
@@ -159,13 +158,13 @@ export default function HistoryList({ onSelect, selectedId, refreshTrigger }) {
   if (history.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800/50 mb-4">
-          <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-stone-100">
+          <svg className="h-7 w-7 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <p className="text-slate-400">暂无历史记录</p>
-        <p className="text-sm text-slate-500 mt-1">开始分析后将在这里显示</p>
+        <p className="font-semibold text-stone-500">暂无历史记录</p>
+        <p className="mt-1 text-sm text-stone-400">开始分析后将在这里显示</p>
       </div>
     );
   }

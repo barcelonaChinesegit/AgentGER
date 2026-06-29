@@ -1,14 +1,62 @@
 import { useState, useEffect } from 'react';
 
 const DIMENSIONS = [
-  { key: 'accuracy', name: '准确性', color: 'from-blue-400 to-blue-600' },
-  { key: 'completeness', name: '完整性', color: 'from-emerald-400 to-emerald-600' },
-  { key: 'fluency', name: '流畅性', color: 'from-violet-400 to-violet-600' },
-  { key: 'conciseness', name: '简洁性', color: 'from-amber-400 to-amber-600' },
-  { key: 'insight', name: '洞察力', color: 'from-rose-400 to-rose-600' },
+  { key: 'faithfulness', fallback: 'accuracy', name: '忠实性', label: 'Faithfulness', color: 'bg-sky-500' },
+  { key: 'completeness', name: '完整性', label: 'Completeness', color: 'bg-emerald-500' },
+  { key: 'conciseness', name: '简洁性', label: 'Conciseness', color: 'bg-amber-500' },
+  { key: 'logicality', fallback: 'fluency', name: '逻辑性', label: 'Logicality', color: 'bg-indigo-500' },
+  { key: 'analysis', fallback: 'insight', name: '分析性', label: 'Analysis', color: 'bg-rose-500' },
 ];
 
-function ScoreRing({ score, size = 80, strokeWidth = 6 }) {
+const PROCESS_ITEMS = [
+  {
+    title: '1. Figure Parsing',
+    description: 'Reading chart image, labels, axes, and visual marks',
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4-4a2 2 0 012.8 0L16 17m-2-2l1-1a2 2 0 012.8 0L20 16M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    title: '2. Summary Evaluation',
+    description: 'Scoring faithfulness, completeness, conciseness, logicality, and analysis',
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-6m4 6V7m4 10v-3M5 19h14" />
+      </svg>
+    ),
+  },
+  {
+    title: '3. Guided Refinement',
+    description: 'Using evaluation feedback to improve weak or missing statements',
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4h2m-1 0v16m7-12l-2 2m-10 0L5 8m14 8l-2-2M7 14l-2 2" />
+      </svg>
+    ),
+  },
+  {
+    title: '4. Report Generation',
+    description: 'Packaging the score report and final summary',
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+];
+
+function getDimensionScore(scores, dimension) {
+  const value = scores[dimension.key] ?? scores[dimension.fallback];
+  return typeof value === 'number' ? value : 0;
+}
+
+function getDimensionReason(reasons, dimension) {
+  return reasons[dimension.key] || reasons[dimension.fallback] || '';
+}
+
+function ScoreRing({ score, size = 96, strokeWidth = 8 }) {
   const [animatedScore, setAnimatedScore] = useState(0);
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -22,7 +70,7 @@ function ScoreRing({ score, size = 80, strokeWidth = 6 }) {
   const getScoreColor = (s) => {
     if (s >= 8) return '#10b981';
     if (s >= 6) return '#f59e0b';
-    if (s >= 4) return '#f97316';
+    if (s >= 4) return '#ed7420';
     return '#ef4444';
   };
 
@@ -34,7 +82,7 @@ function ScoreRing({ score, size = 80, strokeWidth = 6 }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(100, 116, 139, 0.2)"
+          stroke="#eee9e2"
           strokeWidth={strokeWidth}
         />
         <circle
@@ -51,7 +99,7 @@ function ScoreRing({ score, size = 80, strokeWidth = 6 }) {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl font-bold text-white">{score.toFixed(1)}</span>
+        <span className="text-2xl font-extrabold text-stone-950">{score.toFixed(1)}</span>
       </div>
     </div>
   );
@@ -73,50 +121,108 @@ function DimensionBar({ dimension, score, reason, delay = 0 }) {
       `}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-slate-300">{dimension.name}</span>
-        <span className="text-sm font-bold text-white">{score}/2</span>
+        <div>
+          <span className="text-sm font-bold text-stone-900">{dimension.name}</span>
+          <span className="ml-2 text-xs font-medium text-stone-400">{dimension.label}</span>
+        </div>
+        <span className="text-sm font-extrabold text-stone-950">{score}/2</span>
       </div>
-      <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
+      <div className="h-2 overflow-hidden rounded-full bg-stone-100">
         <div
-          className={`h-full bg-gradient-to-r ${dimension.color} rounded-full transition-all duration-1000 ease-out`}
+          className={`h-full ${dimension.color} rounded-full transition-all duration-1000 ease-out`}
           style={{ width: show ? `${(score / 2) * 100}%` : '0%' }}
         />
       </div>
       {reason && (
-        <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">{reason}</p>
+        <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-500">{reason}</p>
       )}
+    </div>
+  );
+}
+
+function ProcessingPanel({ status }) {
+  const activeIndex = status === 'pending' ? 0 : 1;
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white/90 p-5 shadow-panel">
+      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-500">Running Pipeline</p>
+          <h3 className="mt-1 text-xl font-extrabold text-stone-950">Analyzing the figure...</h3>
+        </div>
+        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-600">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
+          {status === 'pending' ? 'Queued' : 'Processing'}
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {PROCESS_ITEMS.map((item, index) => {
+          const isComplete = index < activeIndex;
+          const isActive = index === activeIndex;
+
+          return (
+            <div
+              key={item.title}
+              className={`rounded-xl border p-4 transition ${
+                isActive
+                  ? 'border-brand-200 bg-brand-50/45 shadow-sm'
+                  : isComplete
+                    ? 'border-emerald-100 bg-emerald-50/50'
+                    : 'border-stone-200 bg-white'
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                    isComplete
+                      ? 'bg-emerald-100 text-emerald-600'
+                      : isActive
+                        ? 'bg-brand-100 text-brand-600'
+                        : 'bg-stone-100 text-stone-400'
+                  }`}
+                >
+                  {isComplete ? (
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    item.icon
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="font-bold text-stone-950">{item.title}</h4>
+                    {isActive && <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />}
+                  </div>
+                  <p className="mt-1 text-sm leading-5 text-stone-500">{item.description}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 export default function ResultDisplay({ result, status, pipeline }) {
   if (status === 'pending' || status === 'processing') {
-    return (
-      <div className="glass rounded-2xl p-8">
-        <div className="flex flex-col items-center justify-center py-8">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-brand-500/30 rounded-full" />
-            <div className="absolute inset-0 w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-          <p className="mt-6 text-slate-300 font-medium">正在分析中...</p>
-          <p className="mt-2 text-sm text-slate-500">请稍候，这可能需要一些时间</p>
-        </div>
-      </div>
-    );
+    return <ProcessingPanel status={status} />;
   }
 
   if (status === 'failed' || status === 'error') {
     return (
-      <div className="glass rounded-2xl p-8 border-red-500/30">
+      <div className="rounded-xl border border-red-200 bg-white/90 p-6 shadow-panel">
         <div className="flex items-start gap-4">
-          <div className="p-3 rounded-full bg-red-500/20">
-            <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-red-50 p-3 text-red-500">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div>
-            <h3 className="font-semibold text-red-400">处理失败</h3>
-            <p className="mt-1 text-sm text-slate-400">
+            <h3 className="font-bold text-red-600">处理失败</h3>
+            <p className="mt-1 text-sm leading-6 text-stone-500">
               {result?.error || '请检查输入后重试'}
             </p>
           </div>
@@ -131,33 +237,36 @@ export default function ResultDisplay({ result, status, pipeline }) {
 
   const scores = result.scores || {};
   const reasons = result.reasons || {};
-  const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+  const totalScore = DIMENSIONS.reduce((sum, dim) => sum + getDimensionScore(scores, dim), 0);
   const improvedSummary = result.improved_summary;
+  const scoreLabel = totalScore >= 8 ? '优秀' : totalScore >= 6 ? '良好' : totalScore >= 4 ? '一般' : '需改进';
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* 总分卡片 */}
-      <div className="glass rounded-2xl p-6 glow">
-        <div className="flex items-center gap-6">
+    <div className="animate-fade-in space-y-5">
+      <div className="rounded-xl border border-stone-200 bg-white/92 p-6 shadow-panel">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-5">
           <ScoreRing score={totalScore} size={100} strokeWidth={8} />
           <div>
-            <h3 className="text-lg font-semibold text-slate-200">综合评分</h3>
-            <p className="text-sm text-slate-400 mt-1">
-              {totalScore >= 8 ? '优秀' : totalScore >= 6 ? '良好' : totalScore >= 4 ? '一般' : '需改进'}
-            </p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-500">Final Report</p>
+              <h3 className="mt-1 text-xl font-extrabold text-stone-950">综合评分</h3>
+              <p className="mt-1 text-sm font-medium text-stone-500">{scoreLabel} · Total {totalScore.toFixed(1)}/10</p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="px-2 py-0.5 text-xs rounded-full bg-brand-500/20 text-brand-400">
+                <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-600">
                 {pipeline === 'optimize' || pipeline === 'pipeline2' ? 'RefModel 优化' : 'EvaModel 评价'}
               </span>
             </div>
           </div>
+          </div>
+          <div className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-500">
+            Five-dimensional Chain-of-Evaluation result
+          </div>
         </div>
       </div>
 
-      {/* 各维度评分 */}
-      <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
-          <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="rounded-xl border border-stone-200 bg-white/92 p-6 shadow-panel">
+        <h3 className="mb-5 flex items-center gap-2 text-lg font-extrabold text-stone-950">
+          <svg className="h-5 w-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
           各维度评分
@@ -167,31 +276,29 @@ export default function ResultDisplay({ result, status, pipeline }) {
             <DimensionBar
               key={dim.key}
               dimension={dim}
-              score={scores[dim.key] || 0}
-              reason={reasons[dim.key]}
+              score={getDimensionScore(scores, dim)}
+              reason={getDimensionReason(reasons, dim)}
               delay={index * 100}
             />
           ))}
         </div>
       </div>
 
-      {/* RefModel 改进结果 */}
       {improvedSummary && (
-        <div className="glass rounded-2xl p-6 border-emerald-500/30">
-          <h3 className="text-lg font-semibold text-slate-200 mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="rounded-xl border border-emerald-200 bg-white/92 p-6 shadow-panel">
+          <h3 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-stone-950">
+            <svg className="h-5 w-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
             改进后的总结
           </h3>
           <div className="relative">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-full" />
-            <p className="pl-4 text-slate-300 leading-relaxed">{improvedSummary}</p>
+            <div className="absolute bottom-0 left-0 top-0 w-1 rounded-full bg-emerald-500" />
+            <p className="pl-4 leading-7 text-stone-700">{improvedSummary}</p>
           </div>
           <button
             onClick={() => navigator.clipboard.writeText(improvedSummary)}
-            className="mt-4 flex items-center gap-2 px-3 py-1.5 text-sm text-emerald-400 hover:text-emerald-300 
-                       bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
+            className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-600 transition-colors hover:bg-emerald-100"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />

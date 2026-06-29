@@ -78,6 +78,7 @@ AgentGER 使用五个离散维度分数和 reasoning chains，不依赖额外的
 ├── scripts/                    # 数据分析、评分和批量实验工具
 ├── api_pipeline/               # 可选：外部多模态 API 版本
 ├── web/                        # 可选：FastAPI + React 演示界面
+├── start_frontend_demo.sh       # 本地 Web Demo 一键启动脚本
 ├── data/                       # 仅保留轻量占位；真实数据已 git-ignore
 ├── lora_weights/               # 本地 LoRA adapter 占位；权重已 git-ignore
 └── docs/                       # 架构、数据、训练说明和论文 PDF
@@ -203,14 +204,60 @@ python api_pipeline/main.py direct-score \
 
 ## 可选 Web Demo
 
-Web demo 使用 FastAPI 后端和 React 前端封装同一套 CLI 能力：
+Web demo 使用 FastAPI 后端和 React/Vite 前端封装 AgentGER 的评价与精修流程。当前界面被设计为轻量、适合展示的分析工作台：左侧项目栏、居中的 pipeline 进度条、上传卡片、处理方式选择、评分报告和本地历史记录。
+
+如果只想在 Mac 本地展示前端效果，并且不加载大模型：
+
+```bash
+./start_frontend_demo.sh
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:3000
+```
+
+该脚本会同时启动：
+
+- 前端页面：`http://127.0.0.1:3000`
+- 后端 API：`http://127.0.0.1:8000`
+- 推理模式：默认 `mock`，因此本地演示不会下载或加载 Qwen3-VL 大模型。
+
+按 `Ctrl+C` 可以同时停止前后端服务。
+
+如果部署到服务器，并希望使用服务器本地模型推理：
+
+```bash
+AGENTGER_INFERENCE_MODE=local \
+AGENTGER_MODEL_PATH=/path/to/Qwen3-VL-8B-Instruct \
+AGENTGER_EVA_LORA_PATH=/path/to/eva_model \
+AGENTGER_REF_LORA_PATH=/path/to/ref_model_distill \
+./web/start.sh
+```
+
+此时前端不需要改动，仍然调用同一个 FastAPI 后端；后端会通过 `main.py` 使用服务器本地模型和 LoRA 权重。
+
+演示界面产生的上传图片和历史记录只保存在本地，并已被 git 忽略。
+
+## 展示视频脚本
+
+当前前端的录屏脚本见：[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)。其中包含：
+
+- 90-120 秒展示视频镜头清单；
+- 推荐旁白；
+- 本地 mock 模式解释；
+- 上传、评价、精修、历史记录完整流程；
+- 服务器部署时如何切换到本地模型推理。
+
+## 旧版 Web 启动方式
+
+也可以从 `web/` 目录启动服务：
 
 ```bash
 cd web
 bash start.sh
 ```
-
-演示界面产生的上传图片和历史记录只保存在本地，并已被 git 忽略。
 
 ## 数据与模型策略
 

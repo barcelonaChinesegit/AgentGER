@@ -7,7 +7,7 @@ import uuid
 import json
 import subprocess
 import logging
-from datetime import datetime
+import time
 from typing import Optional
 from pathlib import Path
 import threading
@@ -41,9 +41,10 @@ from database import (
 UPLOAD_DIR = PROJECT_ROOT / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-MODEL_PATH = str(PROJECT_ROOT / "Qwen3-VL-8B-Instruct")
-EVA_LORA_PATH = str(PROJECT_ROOT / "lora_weights" / "eva_model")
-REF_LORA_PATH = str(PROJECT_ROOT / "lora_weights" / "ref_model_distill")
+MODEL_PATH = os.getenv("AGENTGER_MODEL_PATH", str(PROJECT_ROOT / "Qwen3-VL-8B-Instruct"))
+EVA_LORA_PATH = os.getenv("AGENTGER_EVA_LORA_PATH", str(PROJECT_ROOT / "lora_weights" / "eva_model"))
+REF_LORA_PATH = os.getenv("AGENTGER_REF_LORA_PATH", str(PROJECT_ROOT / "lora_weights" / "ref_model_distill"))
+INFERENCE_MODE = os.getenv("AGENTGER_INFERENCE_MODE", "auto").strip().lower()
 MAIN_PY = str(PROJECT_ROOT / "main.py")
 
 app = FastAPI(title="图表总结评估系统")
@@ -110,6 +111,70 @@ def calculate_total_score(result: dict) -> float:
     return sum(score for score in scores.values() if isinstance(score, (int, float)))
 
 
+def should_use_mock_inference() -> bool:
+    """Return True when the web app should avoid loading local model weights."""
+    if INFERENCE_MODE == "mock":
+        return True
+    if INFERENCE_MODE == "local":
+        return False
+    return not Path(MODEL_PATH).exists()
+
+
+def build_mock_result(summary: str, pipeline: str) -> dict:
+    """Create a deterministic demo result for frontend-only local runs."""
+    words = [word for word in summary.replace("\n", " ").split(" ") if word]
+    length_factor = min(len(words), 28)
+    has_numbers = any(char.isdigit() for char in summary)
+    has_trend = any(
+        token in summary.lower()
+        for token in ["increase", "decrease", "rise", "fall", "trend", "higher", "lower", "增长", "下降", "上升", "趋势"]
+    )
+
+    faithfulness = 1.6 if len(summary.strip()) >= 24 else 1.2
+    completeness = 1.1 + min(length_factor / 28, 1) * 0.7
+    conciseness = 1.8 if len(words) <= 55 else 1.3
+    logicality = 1.5 + (0.2 if has_trend else 0)
+    analysis = 1.2 + (0.25 if has_numbers else 0) + (0.25 if has_trend else 0)
+
+    scores = {
+        "faithfulness": round(min(faithfulness, 2.0), 1),
+        "completeness": round(min(completeness, 2.0), 1),
+        "conciseness": round(min(conciseness, 2.0), 1),
+        "logicality": round(min(logicality, 2.0), 1),
+        "analysis": round(min(analysis, 2.0), 1),
+    }
+    reasons = {
+        "faithfulness": "Demo mode checks that the summary is grounded enough for a frontend workflow preview.",
+        "completeness": "The summary covers the main chart message, but server-side inference should verify exact visual details.",
+        "conciseness": "The wording is compact enough for a figure caption style summary.",
+        "logicality": "The statement order is coherent and can support the evaluation-refinement flow.",
+        "analysis": "Analytical depth improves when the summary mentions trends, comparisons, or numerical evidence.",
+    }
+    result = {
+        "scores": scores,
+        "reasons": reasons,
+        "demo_mode": True,
+    }
+    if pipeline == "optimize":
+        result["improved_summary"] = (
+            summary.strip()
+            + " This demo refinement keeps the original claim, adds clearer trend language, "
+              "and marks the result as a placeholder until server-side local inference is enabled."
+        )
+    return result
+
+
+def run_pipeline_mock(record_id: int, summary: str, pipeline: str):
+    """Complete a pipeline record with a lightweight demo response."""
+    print(f"\n[Mock 推理] record_id={record_id}, pipeline={pipeline}", flush=True)
+    update_record(record_id, {}, 0, "processing")
+    time.sleep(1.2)
+    result = build_mock_result(summary, pipeline)
+    total_score = calculate_total_score(result)
+    update_record(record_id, result, total_score, "completed")
+    print(f"[Mock 完成] record_id={record_id}, 总分={total_score}", flush=True)
+
+
 def run_pipeline_subprocess(record_id: int, image_path: str, summary: str, pipeline: str):
     """
     使用 subprocess 运行 pipeline 命令
@@ -137,6 +202,8 @@ def run_pipeline_subprocess(record_id: int, image_path: str, summary: str, pipel
                 "--image", image_path,
                 "--summary", summary,
             ]
+
+            cmd.extend(["--model_path", MODEL_PATH])
 
             if pipeline == "optimize":
                 cmd.extend([
@@ -244,10 +311,18 @@ async def run_pipeline(
     
     print(f"[记录创建] record_id={record_id}", flush=True)
 
-    # 启动后台线程执行 subprocess
+    use_mock = should_use_mock_inference()
+    target = run_pipeline_mock if use_mock else run_pipeline_subprocess
+    args = (record_id, summary, pipeline) if use_mock else (record_id, image_path, summary, pipeline)
+
+    if use_mock:
+        print(f"[推理模式] {INFERENCE_MODE or 'auto'} -> mock（未加载本地大模型）", flush=True)
+    else:
+        print(f"[推理模式] {INFERENCE_MODE or 'auto'} -> local model", flush=True)
+
     thread = threading.Thread(
-        target=run_pipeline_subprocess,
-        args=(record_id, image_path, summary, pipeline),
+        target=target,
+        args=args,
         daemon=True,
         name=f"pipeline-{record_id}"
     )
@@ -323,6 +398,7 @@ if __name__ == "__main__":
     print(f"模型路径: {MODEL_PATH}", flush=True)
     print(f"EvaModel LoRA: {EVA_LORA_PATH}", flush=True)
     print(f"RefModel LoRA: {REF_LORA_PATH}", flush=True)
+    print(f"推理模式: {INFERENCE_MODE} ({'mock' if should_use_mock_inference() else 'local'})", flush=True)
     print(f"上传目录: {UPLOAD_DIR}", flush=True)
     print(f"主程序: {MAIN_PY}", flush=True)
     print(f"{'='*60}\n", flush=True)
