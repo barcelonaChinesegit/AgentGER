@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react';
 
 const DIMENSIONS = [
-  { key: 'faithfulness', fallback: 'accuracy', name: '忠实性', label: 'Faithfulness', color: 'bg-sky-500' },
-  { key: 'completeness', name: '完整性', label: 'Completeness', color: 'bg-emerald-500' },
-  { key: 'conciseness', name: '简洁性', label: 'Conciseness', color: 'bg-amber-500' },
-  { key: 'logicality', fallback: 'fluency', name: '逻辑性', label: 'Logicality', color: 'bg-indigo-500' },
-  { key: 'analysis', fallback: 'insight', name: '分析性', label: 'Analysis', color: 'bg-rose-500' },
+  { key: 'faithfulness', fallback: 'accuracy', name: 'Faithfulness', label: 'Grounding', color: 'bg-sky-500' },
+  { key: 'completeness', name: 'Completeness', label: 'Coverage', color: 'bg-emerald-500' },
+  { key: 'conciseness', name: 'Conciseness', label: 'Brevity', color: 'bg-amber-500' },
+  { key: 'logicality', fallback: 'fluency', name: 'Logicality', label: 'Coherence', color: 'bg-indigo-500' },
+  { key: 'analysis', fallback: 'insight', name: 'Analysis', label: 'Insight', color: 'bg-rose-500' },
 ];
+
+const DIMENSION_NAMES = {
+  faithfulness: 'Faithfulness',
+  completeness: 'Completeness',
+  conciseness: 'Conciseness',
+  logicality: 'Logicality',
+  analysis: 'Analysis',
+};
 
 const PROCESS_ITEMS = [
   {
@@ -140,8 +148,27 @@ function DimensionBar({ dimension, score, reason, delay = 0 }) {
   );
 }
 
+const STATUS_STEP_INDEX = {
+  pending: 0,
+  parsing: 0,
+  processing: 1,
+  evaluating: 1,
+  refining: 2,
+  reporting: 3,
+};
+
+const STATUS_LABELS = {
+  pending: 'Queued',
+  parsing: 'Parsing',
+  processing: 'Evaluating',
+  evaluating: 'Evaluating',
+  refining: 'Refining',
+  reporting: 'Generating report',
+};
+
 function ProcessingPanel({ status }) {
-  const activeIndex = status === 'pending' ? 0 : 1;
+  const activeIndex = STATUS_STEP_INDEX[status] ?? 0;
+  const statusLabel = STATUS_LABELS[status] ?? 'Processing';
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white/90 p-5 shadow-panel">
@@ -152,7 +179,7 @@ function ProcessingPanel({ status }) {
         </div>
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-600">
           <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
-          {status === 'pending' ? 'Queued' : 'Processing'}
+          {statusLabel}
         </span>
       </div>
 
@@ -207,7 +234,7 @@ function ProcessingPanel({ status }) {
 }
 
 export default function ResultDisplay({ result, status, pipeline }) {
-  if (status === 'pending' || status === 'processing') {
+  if (['pending', 'parsing', 'processing', 'evaluating', 'refining', 'reporting'].includes(status)) {
     return <ProcessingPanel status={status} />;
   }
 
@@ -221,9 +248,9 @@ export default function ResultDisplay({ result, status, pipeline }) {
             </svg>
           </div>
           <div>
-            <h3 className="font-bold text-red-600">处理失败</h3>
+            <h3 className="font-bold text-red-600">Analysis failed</h3>
             <p className="mt-1 text-sm leading-6 text-stone-500">
-              {result?.error || '请检查输入后重试'}
+              {result?.error || 'Please check the input and try again.'}
             </p>
           </div>
         </div>
@@ -237,9 +264,11 @@ export default function ResultDisplay({ result, status, pipeline }) {
 
   const scores = result.scores || {};
   const reasons = result.reasons || {};
+  const weights = result.weights || {};
+  const hasWeights = Object.keys(weights).length > 0;
   const totalScore = DIMENSIONS.reduce((sum, dim) => sum + getDimensionScore(scores, dim), 0);
   const improvedSummary = result.improved_summary;
-  const scoreLabel = totalScore >= 8 ? '优秀' : totalScore >= 6 ? '良好' : totalScore >= 4 ? '一般' : '需改进';
+  const scoreLabel = totalScore >= 8 ? 'Excellent' : totalScore >= 6 ? 'Good' : totalScore >= 4 ? 'Fair' : 'Needs improvement';
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -249,11 +278,11 @@ export default function ResultDisplay({ result, status, pipeline }) {
           <ScoreRing score={totalScore} size={100} strokeWidth={8} />
           <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-500">Final Report</p>
-              <h3 className="mt-1 text-xl font-extrabold text-stone-950">综合评分</h3>
+              <h3 className="mt-1 text-xl font-extrabold text-stone-950">Overall Score</h3>
               <p className="mt-1 text-sm font-medium text-stone-500">{scoreLabel} · Total {totalScore.toFixed(1)}/10</p>
             <div className="flex items-center gap-2 mt-2">
                 <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-600">
-                {pipeline === 'optimize' || pipeline === 'pipeline2' ? 'RefModel 优化' : 'EvaModel 评价'}
+                {pipeline === 'optimize' || pipeline === 'pipeline2' ? 'RefModel Refinement' : 'EvaModel Evaluation'}
               </span>
             </div>
           </div>
@@ -269,7 +298,7 @@ export default function ResultDisplay({ result, status, pipeline }) {
           <svg className="h-5 w-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          各维度评分
+          Dimension Scores
         </h3>
         <div className="space-y-5">
           {DIMENSIONS.map((dim, index) => (
@@ -284,13 +313,35 @@ export default function ResultDisplay({ result, status, pipeline }) {
         </div>
       </div>
 
+      {hasWeights && (
+        <div className="rounded-xl border border-stone-200 bg-white/92 p-6 shadow-panel">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-extrabold text-stone-950">
+            <svg className="h-5 w-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3h2v18h-2zM4 10h2v11H4zM18 7h2v14h-2z" />
+            </svg>
+            Dimension Weights
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-5">
+            {DIMENSIONS.map((dim) => {
+              const weight = weights[dim.key] ?? 0;
+              return (
+                <div key={dim.key} className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+                  <p className="text-xs font-bold text-stone-500">{DIMENSION_NAMES[dim.key]}</p>
+                  <p className="mt-1 text-xl font-extrabold text-stone-950">{Math.round(weight * 100)}%</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {improvedSummary && (
         <div className="rounded-xl border border-emerald-200 bg-white/92 p-6 shadow-panel">
           <h3 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-stone-950">
             <svg className="h-5 w-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
-            改进后的总结
+            Improved Summary
           </h3>
           <div className="relative">
             <div className="absolute bottom-0 left-0 top-0 w-1 rounded-full bg-emerald-500" />
@@ -303,7 +354,7 @@ export default function ResultDisplay({ result, status, pipeline }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            复制
+            Copy
           </button>
         </div>
       )}

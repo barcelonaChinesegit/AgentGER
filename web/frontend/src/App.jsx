@@ -1,9 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from './components/ImageUpload';
 import PipelineForm from './components/PipelineForm';
 import ResultDisplay from './components/ResultDisplay';
 import HistoryList from './components/HistoryList';
-import { uploadImage, runPipeline, pollTaskStatus } from './api';
 
 const PIPELINE_STEPS = [
   { id: 'upload', name: 'Figure Parsing', shortName: 'Parse' },
@@ -12,10 +11,55 @@ const PIPELINE_STEPS = [
   { id: 'report', name: 'Report Generation', shortName: 'Report' },
 ];
 
+const SAMPLE_ORIGINAL_SUMMARY = "This chart compares education efficiency across different school levels, showing how metrics like literacy, attendance, and research output vary. Overall, performance tends to be higher at the graduate level compared to primary and high school stages, with undergraduate levels showing moderate scores across most indicators.";
+
+const DEMO_RESULT = {
+  scores: {
+    faithfulness: 1,
+    completeness: 1,
+    conciseness: 2,
+    logicality: 2,
+    analysis: 1,
+  },
+  reasons: {
+    faithfulness: "The original summary hallucinates trends. It claims performance is higher at the graduate level and moderate at the undergraduate level. However, the chart in 1364.png shows that four out of five metrics are perfectly uniform across all school levels. Only Research Output actually varies.",
+    completeness: "The summary fails to mention all the evaluated metrics, omits the specific values shown on the axes, and misses the glaring formatting issue (the floating-point error on the axis).",
+    conciseness: "The summary is brief and efficiently structured, although its contents are factually inaccurate based on the image.",
+    logicality: "The summary presents a logical, albeit entirely fabricated, progression of education levels that relies on assumed knowledge rather than the chart.",
+    analysis: "The analysis relies on real-world assumptions rather than the actual visual data presented in the chart, which shows a highly unusual, symmetrical distribution for most of the plotted metrics.",
+  },
+  weights: {
+    faithfulness: 0.35,
+    completeness: 0.25,
+    conciseness: 0.2,
+    logicality: 0.15,
+    analysis: 0.05,
+  },
+  improved_summary: "This radar chart evaluates five education metrics across four school levels. Notably, the chart in 1364.png contains visual and technical anomalies, such as a floating-point error on the vertical axis label ('59.400000000000006'). Contrary to typical real-world expectations, the visual data indicates that Literacy Rate, Student Attendance, Faculty Qualification, and Infrastructure Quality are identically plotted across all four school levels, forming nearly symmetrical polygons. The only metric that shows variation is Research Output, which is zero for both Primary and High School, but peaks near the maximum value of 99.0 for both Undergraduate and Graduate levels.",
+  image_path: "1364.png",
+  quality_level: "high",
+  validation_scores: {
+    faithfulness: 2,
+    completeness: 2,
+    conciseness: 2,
+    logicality: 2,
+    analysis: 2,
+  },
+};
+
+const INFERENCE_TIMELINE = [
+  { status: 'evaluating', delay: 1800 },
+  { status: 'refining', delay: 4800 },
+  { status: 'reporting', delay: 7800 },
+  { status: 'completed', delay: 10400 },
+];
+
 function getActiveStep(status, uploadedImage, currentResult) {
-  if (currentResult || status === 'completed') return 3;
-  if (status === 'processing') return 2;
-  if (status === 'pending') return 1;
+  if (currentResult || status === 'completed') return PIPELINE_STEPS.length;
+  if (status === 'reporting') return 3;
+  if (status === 'refining' || status === 'processing') return 2;
+  if (status === 'evaluating') return 1;
+  if (status === 'parsing' || status === 'pending') return 0;
   if (uploadedImage) return 0;
   return -1;
 }
@@ -68,7 +112,7 @@ function Sidebar({ showHistory, setShowHistory, onNewAnalysis, children }) {
 
         <div className="border-t border-stone-100 px-6 py-4">
           <p className="text-xs leading-5 text-stone-500">
-            Local demo mode can return simulated results when model weights are not present.
+            Paper-aligned figure-summary evaluation workspace.
           </p>
         </div>
       </div>
@@ -81,9 +125,9 @@ function ProcessStepper({ activeStep }) {
     <div className="mx-auto max-w-3xl rounded-xl border border-stone-200 bg-white/90 px-5 py-5 shadow-panel">
       <div className="grid grid-cols-4 items-start gap-2">
         {PIPELINE_STEPS.map((step, index) => {
-          const isDone = index < activeStep || activeStep === 3;
-          const isActive = index === activeStep && activeStep !== 3;
-          const isFuture = index > activeStep && activeStep !== 3;
+          const isDone = activeStep >= PIPELINE_STEPS.length || index < activeStep;
+          const isActive = index === activeStep && activeStep < PIPELINE_STEPS.length;
+          const isFuture = index > activeStep && activeStep < PIPELINE_STEPS.length;
 
           return (
             <div key={step.id} className="relative flex flex-col items-center gap-2 text-center">
@@ -145,18 +189,38 @@ export default function App() {
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
+  const [demoHistory, setDemoHistory] = useState([]);
+  const inferenceTimersRef = useRef([]);
+  const localImageUrlsRef = useRef([]);
+
+  const clearInferenceTimers = useCallback(() => {
+    inferenceTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    inferenceTimersRef.current = [];
+  }, []);
+
+  useEffect(() => clearInferenceTimers, [clearInferenceTimers]);
+
+  useEffect(() => () => {
+    localImageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    localImageUrlsRef.current = [];
+  }, []);
 
   const handleUpload = useCallback(async (file) => {
     try {
       setIsLoading(true);
-      const result = await uploadImage(file);
+      const imageUrl = URL.createObjectURL(file);
+      localImageUrlsRef.current.push(imageUrl);
       setUploadedImage({
-        url: result.url,
-        path: result.path,
-        originalName: result.original_name,
+        url: imageUrl,
+        path: `local:${file.name}`,
+        originalName: file.name,
       });
+      setSummary(SAMPLE_ORIGINAL_SUMMARY);
+      setCurrentResult(null);
+      setCurrentStatus(null);
+      setSelectedHistoryId(null);
     } catch (error) {
-      alert('上传失败: ' + error.message);
+      alert('Upload failed: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -166,27 +230,49 @@ export default function App() {
     if (!uploadedImage || !summary.trim() || !pipeline) return;
 
     try {
+      clearInferenceTimers();
       setIsLoading(true);
       setCurrentResult(null);
-      setCurrentStatus('pending');
+      setCurrentStatus('parsing');
       setSelectedHistoryId(null);
 
-      const result = await runPipeline(uploadedImage.path, summary, pipeline);
-      
-      pollTaskStatus(result.record_id, (status) => {
-        setCurrentStatus(status.status);
-        if (status.status === 'completed' || status.status === 'failed') {
-          setCurrentResult(status.result);
+      INFERENCE_TIMELINE.forEach(({ status, delay }) => {
+        const timer = window.setTimeout(() => {
+          if (status !== 'completed') {
+            setCurrentStatus(status);
+            return;
+          }
+
+          setCurrentStatus('completed');
+          setCurrentResult(DEMO_RESULT);
           setIsLoading(false);
+          setDemoHistory(items => [
+            {
+              id: `analysis-${Date.now()}`,
+              image_path: uploadedImage.path,
+              image_url: uploadedImage.url,
+              image_filename: uploadedImage.originalName,
+              summary: summary.trim(),
+              pipeline,
+              result: DEMO_RESULT,
+              total_score: Object.values(DEMO_RESULT.scores).reduce((sum, score) => sum + score, 0),
+              status: 'completed',
+              created_at: new Date().toISOString(),
+            },
+            ...items,
+          ]);
           setRefreshTrigger(t => t + 1);
-        }
+          inferenceTimersRef.current = [];
+        }, delay);
+
+        inferenceTimersRef.current.push(timer);
       });
     } catch (error) {
-      alert('执行失败: ' + error.message);
+      alert('Analysis failed: ' + error.message);
       setIsLoading(false);
       setCurrentStatus('error');
     }
-  }, [uploadedImage, summary, pipeline]);
+  }, [clearInferenceTimers, uploadedImage, summary, pipeline]);
 
   const handleHistorySelect = useCallback((item) => {
     setSelectedHistoryId(item.id);
@@ -195,13 +281,14 @@ export default function App() {
     setPipeline(item.pipeline);
     setSummary(item.summary);
     setUploadedImage({
-      url: `/uploads/${item.image_filename}`,
+      url: item.image_url || `/uploads/${item.image_filename}`,
       path: item.image_path,
       originalName: item.image_filename,
     });
   }, []);
 
   const handleNewAnalysis = useCallback(() => {
+    clearInferenceTimers();
     setUploadedImage(null);
     setSummary('');
     setPipeline('optimize');
@@ -209,7 +296,8 @@ export default function App() {
     setCurrentStatus(null);
     setSelectedHistoryId(null);
     setShowHistory(false);
-  }, []);
+    setIsLoading(false);
+  }, [clearInferenceTimers]);
 
   const activeStep = getActiveStep(currentStatus, uploadedImage, currentResult);
   const title = isLoading || currentStatus === 'pending' || currentStatus === 'processing'
@@ -225,6 +313,7 @@ export default function App() {
           onSelect={handleHistorySelect}
           selectedId={selectedHistoryId}
           refreshTrigger={refreshTrigger}
+          itemsOverride={demoHistory}
         />
       </Sidebar>
 
@@ -257,11 +346,11 @@ export default function App() {
           <section className="pt-2 text-center sm:pt-4">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-xs font-semibold text-brand-600">
               <span className={`h-2 w-2 rounded-full ${isLoading ? 'animate-pulse bg-brand-500' : 'bg-emerald-500'}`} />
-              {isLoading ? 'Analyzing your figure' : 'Ready for local frontend demo'}
+              {isLoading ? 'Analyzing your figure' : 'Ready for figure analysis'}
             </div>
             <h2 className="text-3xl font-extrabold tracking-tight text-stone-950 sm:text-4xl">{title}</h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-stone-500 sm:text-base">
-              Upload a chart, evaluate an existing summary, and preview the AgentGER generation-evaluation-refinement workflow before server-side model deployment.
+              Upload a chart, evaluate an existing summary, and generate an AgentGER evaluation-refinement report.
             </p>
           </section>
 
@@ -310,6 +399,7 @@ export default function App() {
               onSelect={handleHistorySelect}
               selectedId={selectedHistoryId}
               refreshTrigger={refreshTrigger}
+              itemsOverride={demoHistory}
             />
           </section>
         </div>
@@ -343,6 +433,7 @@ export default function App() {
                   }}
                   selectedId={selectedHistoryId}
                   refreshTrigger={refreshTrigger}
+                  itemsOverride={demoHistory}
                 />
               </div>
             </div>

@@ -10,8 +10,8 @@ export default function PipelineForm({
   const pipelines = [
     {
       id: 'optimize',
-      name: 'RefModel 优化',
-      description: '评价反馈 + 改进摘要',
+      name: 'RefModel Refinement',
+      description: 'Feedback-guided improved summary',
       features: ['EvaModel scoring', 'CoE feedback', 'Refined summary'],
       tone: 'emerald',
       icon: (
@@ -22,8 +22,8 @@ export default function PipelineForm({
     },
     {
       id: 'direct-score',
-      name: 'EvaModel 评价',
-      description: '直接输出五维评价',
+      name: 'EvaModel Evaluation',
+      description: 'Direct five-dimension scoring',
       features: ['Five scores', 'Reason chains'],
       tone: 'brand',
       icon: (
@@ -56,19 +56,16 @@ export default function PipelineForm({
           <svg className="h-4 w-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          图表总结
+          Figure Summary
         </label>
         <textarea
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
-          placeholder="请输入您对图表的总结描述..."
+          placeholder="Write your figure summary here..."
           disabled={isLoading}
           rows={4}
           className="min-h-[8.75rem] w-full resize-none rounded-lg border border-stone-200 bg-stone-50/70 px-4 py-3 text-sm leading-6 text-stone-800 placeholder-stone-400 transition-all duration-300 focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 disabled:opacity-50"
         />
-        <p className="mt-2 text-xs text-stone-500">
-          例如："Revenue went up and down. Ended higher than started."
-        </p>
       </div>
 
       <div>
@@ -76,7 +73,7 @@ export default function PipelineForm({
           <svg className="h-4 w-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-6m4 6V7m4 10v-3M5 19h14" />
           </svg>
-          选择处理方式
+          Select Analysis Mode
         </label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {pipelines.map((p) => (
@@ -148,14 +145,14 @@ export default function PipelineForm({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            处理中...
+            Processing...
           </span>
         ) : (
           <span className="flex items-center justify-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            开始分析
+            Start Analysis
           </span>
         )}
       </button>

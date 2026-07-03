@@ -1,11 +1,11 @@
 /**
- * API 接口封装
+ * API helpers
  */
 
 const API_BASE = '/api';
 
 /**
- * 上传图片
+ * Upload image
  */
 export async function uploadImage(file) {
   const formData = new FormData();
@@ -18,14 +18,14 @@ export async function uploadImage(file) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || '上传失败');
+    throw new Error(error.detail || 'Upload failed');
   }
 
   return response.json();
 }
 
 /**
- * 运行 Pipeline
+ * Run pipeline
  */
 export async function runPipeline(imagePath, summary, pipeline) {
   const formData = new FormData();
@@ -40,56 +40,56 @@ export async function runPipeline(imagePath, summary, pipeline) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || '运行失败');
+    throw new Error(error.detail || 'Run failed');
   }
 
   return response.json();
 }
 
 /**
- * 获取任务状态
+ * Get task status
  */
 export async function getTaskStatus(recordId) {
   const response = await fetch(`${API_BASE}/status/${recordId}`);
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || '获取状态失败');
+    throw new Error(error.detail || 'Failed to get task status');
   }
 
   return response.json();
 }
 
 /**
- * 获取历史记录列表
+ * Get history list
  */
 export async function getHistory(limit = 50, offset = 0) {
   const response = await fetch(`${API_BASE}/history?limit=${limit}&offset=${offset}`);
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || '获取历史记录失败');
+    throw new Error(error.detail || 'Failed to get history');
   }
 
   return response.json();
 }
 
 /**
- * 获取单条记录详情
+ * Get history detail
  */
 export async function getHistoryDetail(recordId) {
   const response = await fetch(`${API_BASE}/history/${recordId}`);
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || '获取记录详情失败');
+    throw new Error(error.detail || 'Failed to get history detail');
   }
 
   return response.json();
 }
 
 /**
- * 轮询任务状态直到完成
+ * Poll task status until completion
  */
 export function pollTaskStatus(recordId, onUpdate, interval = 2000) {
   const poll = async () => {
@@ -107,4 +107,3 @@ export function pollTaskStatus(recordId, onUpdate, interval = 2000) {
 
   poll();
 }
-

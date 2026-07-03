@@ -25,7 +25,7 @@ body {
   overflow-x: hidden;
 }
 
-/* 自定义滚动条 */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -65,7 +65,7 @@ body {
   box-shadow: 0 12px 24px rgba(237, 116, 32, 0.18);
 }
 
-/* 渐变文字 */
+/* Gradient text */
 .gradient-text {
   background: linear-gradient(135deg, #f19144 0%, #ed7420 48%, #b84314 100%);
   -webkit-background-clip: text;
@@ -89,7 +89,7 @@ body {
   background-size: 32px 32px, 32px 32px, 100% 100%;
 }
 
-/* 动画 */
+/* Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -115,7 +115,7 @@ body {
   animation: shimmer 2s infinite;
 }
 
-/* 按钮悬停效果 */
+/* Button hover effect */
 .btn-primary {
   @apply relative overflow-hidden transition-all duration-300;
   background: linear-gradient(135deg, #ed7420 0%, #de5a16 100%);
@@ -146,7 +146,7 @@ body {
   box-shadow: 0 14px 28px rgba(237, 116, 32, 0.28);
 }
 
-/* 输入框焦点效果 */
+/* Input focus effect */
 .input-focus {
   @apply transition-all duration-300;
 }
@@ -156,7 +156,7 @@ body {
   border-color: var(--color-accent);
 }
 
-/* 卡片悬停效果 */
+/* Card hover effect */
 .card-hover {
   @apply transition-all duration-300;
 }
@@ -167,14 +167,14 @@ body {
   border-color: rgba(237, 116, 32, 0.3);
 }
 
-/* 进度条 */
+/* Progress bar */
 .progress-bar {
   background: linear-gradient(90deg, #ed7420 0%, #f6b77a 50%, #ed7420 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
 }
 
-/* 分数圆环 */
+/* Score ring */
 .score-ring {
   stroke-dasharray: 100;
   stroke-linecap: round;

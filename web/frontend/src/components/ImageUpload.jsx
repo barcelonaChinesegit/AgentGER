@@ -32,7 +32,7 @@ export default function ImageUpload({ onUpload, uploadedImage, isLoading }) {
 
   const handleFile = (file) => {
     if (!file.type.startsWith('image/')) {
-      alert('请选择图片文件');
+      alert('Please select an image file.');
       return;
     }
     onUpload(file);
@@ -86,7 +86,7 @@ export default function ImageUpload({ onUpload, uploadedImage, isLoading }) {
           <div className="group relative h-full">
             <img
               src={uploadedImage.url}
-              alt="已上传的图表"
+              alt="Uploaded chart"
               className="h-[22rem] w-full rounded-[10px] bg-white object-contain p-3"
             />
             <div className="absolute inset-0 flex items-center justify-center rounded-[10px] bg-stone-950/55 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
@@ -94,7 +94,7 @@ export default function ImageUpload({ onUpload, uploadedImage, isLoading }) {
                 <svg className="mx-auto mb-2 h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span className="text-sm font-semibold text-white">点击更换图片</span>
+                <span className="text-sm font-semibold text-white">Click to replace image</span>
               </div>
             </div>
             <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-stone-200 bg-white/92 px-3 py-2 shadow-sm backdrop-blur-sm">
@@ -108,8 +108,8 @@ export default function ImageUpload({ onUpload, uploadedImage, isLoading }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
             </div>
-            <p className="mb-1 text-base font-bold text-stone-950">拖拽图片到这里</p>
-            <p className="text-sm text-stone-500">或点击选择文件</p>
+            <p className="mb-1 text-base font-bold text-stone-950">Drop an image here</p>
+            <p className="text-sm text-stone-500">or click to choose a file</p>
             <p className="mt-4 rounded-full bg-white px-3 py-1 text-xs font-medium text-stone-400 shadow-sm">
               PNG, JPG, GIF, WebP
             </p>

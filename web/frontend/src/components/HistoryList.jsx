@@ -3,8 +3,6 @@ import { getHistory } from '../api';
 
 function formatDate(dateString) {
   if (!dateString) return '';
-  // 处理时区问题 - 数据库存储的是 UTC 时间，需要转换为本地时间
-  // 如果字符串不包含时区信息，添加 UTC 标记
   let dateStr = dateString;
   if (!dateStr.includes('Z') && !dateStr.includes('+')) {
     dateStr = dateStr.replace(' ', 'T') + 'Z';
@@ -13,15 +11,14 @@ function formatDate(dateString) {
   const now = new Date();
   const diff = now - date;
   
-  // 处理负数差值（未来时间或时区问题）
-  if (diff < 0) return '刚刚';
+  if (diff < 0) return 'Just now';
   
-  if (diff < 60000) return '刚刚';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)} 天前`;
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} hr ago`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
   
-  return date.toLocaleDateString('zh-CN', {
+  return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -31,10 +28,10 @@ function formatDate(dateString) {
 
 function StatusBadge({ status }) {
   const configs = {
-    completed: { text: '已完成', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
-    pending: { text: '等待中', color: 'bg-amber-50 text-amber-600 border-amber-100' },
-    processing: { text: '处理中', color: 'bg-sky-50 text-sky-600 border-sky-100' },
-    failed: { text: '失败', color: 'bg-red-50 text-red-600 border-red-100' },
+    completed: { text: 'Completed', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
+    pending: { text: 'Pending', color: 'bg-amber-50 text-amber-600 border-amber-100' },
+    processing: { text: 'Processing', color: 'bg-sky-50 text-sky-600 border-sky-100' },
+    failed: { text: 'Failed', color: 'bg-red-50 text-red-600 border-red-100' },
   };
   
   const config = configs[status] || configs.pending;
@@ -64,7 +61,7 @@ function HistoryItem({ item, isSelected, onClick }) {
       <div className="flex items-start gap-3">
         <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
           <img
-            src={`/uploads/${item.image_filename}`}
+            src={item.image_url || `/uploads/${item.image_filename}`}
             alt=""
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -105,12 +102,19 @@ function HistoryItem({ item, isSelected, onClick }) {
   );
 }
 
-export default function HistoryList({ onSelect, selectedId, refreshTrigger }) {
+export default function HistoryList({ onSelect, selectedId, refreshTrigger, itemsOverride = null }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const displayHistory = itemsOverride || history;
 
   const fetchHistory = async () => {
+    if (itemsOverride) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       const data = await getHistory(50, 0);
@@ -125,15 +129,16 @@ export default function HistoryList({ onSelect, selectedId, refreshTrigger }) {
 
   useEffect(() => {
     fetchHistory();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, itemsOverride]);
 
-  // 自动刷新（每10秒）
   useEffect(() => {
+    if (itemsOverride) return undefined;
+
     const interval = setInterval(fetchHistory, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [itemsOverride]);
 
-  if (loading && history.length === 0) {
+  if (loading && displayHistory.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
@@ -149,13 +154,13 @@ export default function HistoryList({ onSelect, selectedId, refreshTrigger }) {
           onClick={fetchHistory}
           className="mt-2 text-sm font-bold text-brand-600 hover:text-brand-700"
         >
-          重试
+          Retry
         </button>
       </div>
     );
   }
 
-  if (history.length === 0) {
+  if (displayHistory.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-stone-100">
@@ -163,15 +168,15 @@ export default function HistoryList({ onSelect, selectedId, refreshTrigger }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <p className="font-semibold text-stone-500">暂无历史记录</p>
-        <p className="mt-1 text-sm text-stone-400">开始分析后将在这里显示</p>
+        <p className="font-semibold text-stone-500">No history yet</p>
+        <p className="mt-1 text-sm text-stone-400">Analyses will appear here after you run them</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {history.map((item) => (
+      {displayHistory.map((item) => (
         <HistoryItem
           key={item.id}
           item={item}

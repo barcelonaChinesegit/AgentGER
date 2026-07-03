@@ -223,6 +223,7 @@ The launcher starts:
 - Frontend: `http://127.0.0.1:3000`
 - Backend API: `http://127.0.0.1:8000`
 - Inference mode: `mock` by default, so the local demo does not download or load the large Qwen3-VL model.
+- Recording behavior: the current frontend is pinned to a fixed 2020-2024 growth-rate sample. Any uploaded image will display the same demo evaluation, reasons, weights, and improved summary. This is intentional for stable video recording and can be replaced when model inference is connected.
 
 Stop both services with `Ctrl+C`.
 

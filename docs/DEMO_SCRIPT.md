@@ -21,11 +21,12 @@ The launcher starts both services:
 - Frontend: Vite + React at `http://127.0.0.1:3000`
 - Backend: FastAPI at `http://127.0.0.1:8000`
 - Inference mode: `mock` by default, so local Mac demos do not load or download the large vision-language model.
+- Recording behavior: the current frontend is pinned to the fixed 2020-2024 growth-rate sample below. Any uploaded image will show the same demo scores, reasons, weights, and improved summary.
 
-Prepare one chart image and one short imperfect summary before recording. Example narration input:
+Prepare any chart image before recording. The text area is prefilled with this fixed imperfect summary:
 
 ```text
-Revenue fluctuates across the chart but ends higher than it started, with the strongest rise near the final period.
+The chart illustrates year-over-year growth rates from 2020 to 2024, revealing a significant recovery trajectory after a -1.4% contraction in 2020. Growth rebounded strongly in 2021 (+1.0%), followed by moderate expansion in 2022 (+0.6%) and 2023 (+0.9%), indicating stabilization and resilience. The projected growth for 2024 is a deceleration to +0.3%, suggesting a gradual slowdown in momentum. Overall, the data reflects a V-shaped recovery with declining growth rates in the latter half of the period, consistent with post-pandemic economic normalization patterns.
 ```
 
 ## Shot List
@@ -62,19 +63,19 @@ For local frontend demonstration, the app runs in mock inference mode. This keep
 
 **Narration**
 
-The first step is figure parsing. The interface accepts common image formats and keeps uploaded files local under the ignored runtime upload directory. The image preview lets users verify that the correct chart is being evaluated.
+The first step is figure parsing. The interface accepts common image formats and keeps uploaded files local under the ignored runtime upload directory. For recording, the uploaded image only drives the preview; the evaluation result is intentionally fixed to the 2020-2024 sample.
 
 ### 4. Enter Summary And Choose Pipeline
 
 **Visual action**
 
-- Paste the prepared summary into the text area.
+- Keep the prefilled demo summary in the text area.
 - Keep `RefModel 优化` selected.
 - Briefly hover or click `EvaModel 评价` and then return to `RefModel 优化` if you want to show both modes.
 
 **Narration**
 
-The user provides a candidate figure summary. EvaModel mode returns direct five-dimensional evaluation, while RefModel mode performs evaluation-guided refinement and returns both scores and an improved summary.
+The user provides a candidate figure summary. In this recording build, the frontend uses a fixed sample so the final report is stable across takes. EvaModel mode represents direct five-dimensional evaluation, while RefModel mode represents evaluation-guided refinement with an improved summary.
 
 ### 5. Run Analysis
 
@@ -97,7 +98,7 @@ When the analysis starts, the UI mirrors the project pipeline: figure parsing, s
 
 **Narration**
 
-The final report follows AgentGER's paper-aligned scoring dimensions: Faithfulness, Completeness, Conciseness, Logicality, and Analysis. The interface shows the total score, dimension-level scores, reasoning text, and the RefModel improved summary.
+The final report follows AgentGER's paper-aligned scoring dimensions: Faithfulness, Completeness, Conciseness, Logicality, and Analysis. The interface shows the total score, dimension-level scores, reasoning text, dimension weights, and the RefModel improved summary.
 
 ### 7. History And Repeatability
 
